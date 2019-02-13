@@ -20,14 +20,10 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"strconv"
-	"time"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	pipConfig "github.com/banzaicloud/pipeline/config"
-	"github.com/banzaicloud/pipeline/internal/backoff"
 	"github.com/banzaicloud/pipeline/internal/cluster"
 	internalPke "github.com/banzaicloud/pipeline/internal/providers/pke"
 	"github.com/banzaicloud/pipeline/model"
@@ -44,6 +40,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+	"strconv"
 )
 
 var _ CommonCluster = (*EC2ClusterPKE)(nil)
@@ -255,63 +252,6 @@ func (c *EC2ClusterPKE) SetCurrentWorkflowID(workflowID string) error {
 func (c *EC2ClusterPKE) CreatePKECluster(tokenGenerator TokenGenerator, externalBaseURL string) error {
 	// Fetch
 
-	// Generate certificates
-	clusterUidTag := fmt.Sprintf("clusterUID:%s", c.GetUID())
-	req := &secret.CreateSecretRequest{
-		Name: fmt.Sprintf("cluster-%d-ca", c.GetID()),
-		Values: map[string]string{
-			pkgSecret.ClusterUID: fmt.Sprintf("%d-%d", c.GetOrganizationId(), c.GetID()),
-		},
-		Type: pkgSecret.PKESecretType,
-		Tags: []string{
-			clusterUidTag,
-			pkgSecret.TagBanzaiReadonly,
-			pkgSecret.TagBanzaiHidden,
-		},
-	}
-	_, err := secret.Store.GetOrCreate(c.GetOrganizationId(), req)
-	if err != nil {
-		return err
-	}
-	// prepare input for real AWS flow
-	_, err = c.GetPipelineToken(tokenGenerator)
-	if err != nil {
-		return emperror.Wrap(err, "can't generate Pipeline token")
-	}
-	//client, err := c.GetAWSClient()
-	//if err != nil {
-	//	return err
-	//}
-	//cloudformationSrv := cloudformation.New(client)
-	//err = CreateMasterCF(cloudformationSrv)
-	//if err != nil {
-	//	return emperror.Wrap(err, "can't create master CF template")
-	//}
-	token := "XXX" // TODO masked from dumping valid tokens to log
-	for _, nodePool := range c.model.NodePools {
-		cmd := c.GetBootstrapCommand(nodePool.Name, externalBaseURL, token)
-		c.log.Debugf("TODO: start ASG with command %s", cmd)
-	}
-
-	c.UpdateStatus(c.model.Cluster.Status, "Waiting for Kubeconfig from master node.")
-	clusters := cluster.NewClusters(pipConfig.DB()) // TODO get it from non-global context
-	err = backoff.Retry(func() error {
-		id, err := clusters.GetConfigSecretIDByClusterID(c.GetOrganizationId(), c.GetID())
-		if err != nil {
-			return err
-		} else if id == "" {
-			log.Debug("waiting for Kubeconfig (/ready call)")
-			return errors.New("no Kubeconfig received from master")
-		}
-		c.model.Cluster.ConfigSecretID = id
-		return nil
-	}, backoff.NewConstantBackoffPolicy(&backoff.ConstantBackoffConfig{
-		Delay:          20 * time.Second,
-		MaxElapsedTime: 30 * time.Minute}))
-
-	if err != nil {
-		return emperror.Wrap(err, "timeout")
-	}
 	return nil
 }
 
