@@ -48,14 +48,14 @@ func IsProviderSupported(provider providers.ProviderID) error {
 }
 
 // GetSecretWithValidation gives back a secret response with validation
-func GetSecretWithValidation(secretID pkgSecret.SecretID, orgID pkgAuth.OrganizationID, provider string) (*secret.SecretItemResponse, error) {
+func GetSecretWithValidation(secretID pkgSecret.SecretID, orgID pkgAuth.OrganizationID, provider providers.ProviderID) (*secret.SecretItemResponse, error) {
 
 	secret, err := secret.Store.Get(orgID, secretID)
 	if err != nil {
 		return nil, errors.Wrap(err, "error validating create bucket request")
 	}
 
-	err = secret.ValidateSecretType(provider)
+	err = secret.ValidateSecretType(string(provider))
 	if err != nil {
 		return nil, errors.Wrap(err, "error validating create bucket request")
 	}

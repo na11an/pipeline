@@ -19,6 +19,7 @@ import (
 
 	"github.com/banzaicloud/pipeline/model"
 	pkgAuth "github.com/banzaicloud/pipeline/pkg/auth"
+	pkgCluster "github.com/banzaicloud/pipeline/pkg/cluster"
 	pkgSecret "github.com/banzaicloud/pipeline/pkg/secret"
 	"github.com/goph/emperror"
 	"github.com/pkg/errors"
@@ -67,7 +68,7 @@ func (m *Manager) GetAllClusters(ctx context.Context) ([]CommonCluster, error) {
 }
 
 // GetClusterByID returns the cluster instance for an organization ID by cluster ID.
-func (m *Manager) GetClusterByID(ctx context.Context, organizationID pkgAuth.OrganizationID, clusterID uint) (CommonCluster, error) {
+func (m *Manager) GetClusterByID(ctx context.Context, organizationID pkgAuth.OrganizationID, clusterID pkgCluster.ClusterID) (CommonCluster, error) {
 	logger := m.getLogger(ctx).WithFields(logrus.Fields{
 		"organization": organizationID,
 		"cluster":      clusterID,
@@ -89,7 +90,7 @@ func (m *Manager) GetClusterByID(ctx context.Context, organizationID pkgAuth.Org
 }
 
 // GetClusterByIDOnly returns the cluster instance by cluster ID.
-func (m *Manager) GetClusterByIDOnly(ctx context.Context, clusterID uint) (CommonCluster, error) {
+func (m *Manager) GetClusterByIDOnly(ctx context.Context, clusterID pkgCluster.ClusterID) (CommonCluster, error) {
 	logger := m.getLogger(ctx).WithFields(logrus.Fields{
 		"cluster": clusterID,
 	})

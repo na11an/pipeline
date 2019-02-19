@@ -40,7 +40,7 @@ func ValidateCreateBucketRequest(req *api.CreateBucketRequest, org *auth.Organiz
 		}
 	}
 
-	secret, err := GetSecretWithValidation(req.SecretID, org.ID, req.Cloud)
+	secret, err := GetSecretWithValidation(req.SecretID, org.ID, pkgProviders.ProviderID(req.Cloud))
 	if err != nil {
 		return errors.Wrap(err, "error validating create bucket request")
 	}

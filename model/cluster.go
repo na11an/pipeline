@@ -85,8 +85,8 @@ type ClusterModel struct {
 
 // ScaleOptions describes scale options
 type ScaleOptions struct {
-	ID                  uint `gorm:"primary_key"`
-	ClusterID           uint `gorm:"unique_index:ux_cluster_id"`
+	ID                  uint                 `gorm:"primary_key"`
+	ClusterID           pkgCluster.ClusterID `gorm:"unique_index:ux_cluster_id"`
 	Enabled             bool
 	DesiredCpu          float64
 	DesiredMem          float64
@@ -101,8 +101,8 @@ type ACSKNodePoolModel struct {
 	ID                           uint `gorm:"primary_key"`
 	CreatedAt                    time.Time
 	CreatedBy                    pkgAuth.UserID
-	ClusterID                    uint   `gorm:"unique_index:idx_cluster_id_name"`
-	Name                         string `gorm:"unique_index:idx_cluster_id_name"`
+	ClusterID                    pkgCluster.ClusterID `gorm:"unique_index:idx_cluster_id_name"`
+	Name                         string               `gorm:"unique_index:idx_cluster_id_name"`
 	InstanceType                 string
 	DeprecatedSystemDiskCategory string `gorm:"column:system_disk_category"`
 	DeprecatedSystemDiskSize     int    `gorm:"column:system_disk_size"`
@@ -136,8 +136,8 @@ type AmazonNodePoolsModel struct {
 	ID               uint `gorm:"primary_key"`
 	CreatedAt        time.Time
 	CreatedBy        pkgAuth.UserID
-	ClusterID        uint   `gorm:"unique_index:idx_cluster_id_name"`
-	Name             string `gorm:"unique_index:idx_cluster_id_name"`
+	ClusterID        pkgCluster.ClusterID `gorm:"unique_index:idx_cluster_id_name"`
+	Name             string               `gorm:"unique_index:idx_cluster_id_name"`
 	NodeSpotPrice    string
 	Autoscaling      bool
 	NodeMinCount     int

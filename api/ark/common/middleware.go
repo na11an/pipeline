@@ -28,7 +28,8 @@ import (
 	"github.com/banzaicloud/pipeline/cluster"
 	"github.com/banzaicloud/pipeline/internal/ark"
 	intCluster "github.com/banzaicloud/pipeline/internal/cluster"
-	"github.com/banzaicloud/pipeline/internal/platform/gin/utils"
+	ginutils "github.com/banzaicloud/pipeline/internal/platform/gin/utils"
+	pkgCluster "github.com/banzaicloud/pipeline/pkg/cluster"
 )
 
 const (
@@ -55,7 +56,7 @@ func ARKMiddleware(db *gorm.DB, logger logrus.FieldLogger) gin.HandlerFunc {
 			ErrorHandler.Handle(err)
 			return
 		}
-		cl, err := clusters.FindOneByID(org.ID, clusterID)
+		cl, err := clusters.FindOneByID(org.ID, pkgCluster.ClusterID(clusterID))
 		if err != nil {
 			err = emperror.Wrap(err, "could not find cluster")
 			ErrorResponse(c, err)

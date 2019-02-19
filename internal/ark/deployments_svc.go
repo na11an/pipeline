@@ -127,7 +127,7 @@ func (s *DeploymentsService) Deploy(bucket *ClusterBackupBucketsModel, restoreMo
 		return errors.Wrap(err, "error getting cluster secret")
 	}
 
-	bucketSecret, err := GetSecretWithValidation(bucket.SecretID, s.org.ID, bucket.Cloud)
+	bucketSecret, err := GetSecretWithValidation(bucket.SecretID, s.org.ID, providers.ProviderID(bucket.Cloud))
 	if err != nil {
 		return errors.Wrap(err, "error getting bucket secret")
 	}

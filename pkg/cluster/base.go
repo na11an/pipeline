@@ -121,6 +121,9 @@ const (
 // ClusterID represents the identifier of a cluster
 type ClusterID uint
 
+// ClusterType represents the type of a cluster
+type ClusterType string
+
 // CreateClusterRequest describes a create cluster request
 type CreateClusterRequest struct {
 	Name         string                   `json:"name" yaml:"name" binding:"required"`

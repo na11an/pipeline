@@ -30,6 +30,7 @@ import (
 	pkgCluster "github.com/banzaicloud/pipeline/pkg/cluster"
 	pkgCommon "github.com/banzaicloud/pipeline/pkg/common"
 	pkgErrors "github.com/banzaicloud/pipeline/pkg/errors"
+	"github.com/banzaicloud/pipeline/pkg/providers"
 	modelOracle "github.com/banzaicloud/pipeline/pkg/providers/oracle/model"
 	pkgSecret "github.com/banzaicloud/pipeline/pkg/secret"
 	"github.com/banzaicloud/pipeline/secret"
@@ -37,6 +38,22 @@ import (
 	"github.com/goph/emperror"
 	"github.com/pkg/errors"
 )
+
+// Cluster defines the common interface of clusters
+type Cluster interface {
+	Deploy() (created bool, err error) // Deploy ensures that the cluster has been fully realized on the provider, and returns false when the cluster has already been deployed
+	Dispose() error
+
+	GetCreatedBy() pkgAuth.UserID
+	GetCreationTime() time.Time
+	GetDistributionID() pkgCluster.DistributionID
+	GetID() pkgCluster.ClusterID
+	GetName() string
+	GetOrganizationID() pkgAuth.OrganizationID
+	GetProviderID() providers.ProviderID
+	GetType() pkgCluster.ClusterType
+	GetUUID() string
+}
 
 // CommonCluster interface for clusters.
 type CommonCluster interface {

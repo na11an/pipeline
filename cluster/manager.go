@@ -23,6 +23,7 @@ import (
 	pipelineContext "github.com/banzaicloud/pipeline/internal/platform/context"
 	"github.com/banzaicloud/pipeline/model"
 	pkgAuth "github.com/banzaicloud/pipeline/pkg/auth"
+	pkgCluster "github.com/banzaicloud/pipeline/pkg/cluster"
 	pkgSecret "github.com/banzaicloud/pipeline/pkg/secret"
 	"github.com/goph/emperror"
 	cache "github.com/patrickmn/go-cache"
@@ -35,7 +36,7 @@ type clusterRepository interface {
 	Exists(organizationID pkgAuth.OrganizationID, name string) (bool, error)
 	All() ([]*model.ClusterModel, error)
 	FindByOrganization(organizationID pkgAuth.OrganizationID) ([]*model.ClusterModel, error)
-	FindOneByID(organizationID pkgAuth.OrganizationID, clusterID uint) (*model.ClusterModel, error)
+	FindOneByID(organizationID pkgAuth.OrganizationID, clusterID pkgCluster.ClusterID) (*model.ClusterModel, error)
 	FindOneByName(organizationID pkgAuth.OrganizationID, clusterName string) (*model.ClusterModel, error)
 	FindBySecret(organizationID pkgAuth.OrganizationID, secretID pkgSecret.SecretID) ([]*model.ClusterModel, error)
 }

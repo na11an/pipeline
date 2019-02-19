@@ -53,6 +53,9 @@ import (
 
 var _ CommonCluster = (*ACSKCluster)(nil)
 
+// ACK is Alibaba Cloud's Container Service for Kubernetes
+const ACK pkgCluster.ClusterType = "ack"
+
 type ACSKCluster struct {
 	alibabaCluster *acsk.AlibabaDescribeClusterResponse
 	modelCluster   *model.ClusterModel
@@ -570,8 +573,8 @@ func (c *ACSKCluster) GetName() string {
 	return c.modelCluster.Name
 }
 
-func (c *ACSKCluster) GetType() string {
-	return c.modelCluster.Cloud
+func (c *ACSKCluster) GetType() pkgCluster.ClusterType {
+	return ACK
 }
 
 func (c *ACSKCluster) GetStatus() (*pkgCluster.GetClusterStatusResponse, error) {

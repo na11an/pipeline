@@ -22,7 +22,8 @@ import (
 	"github.com/banzaicloud/pipeline/auth"
 	"github.com/banzaicloud/pipeline/cluster"
 	"github.com/banzaicloud/pipeline/internal/platform/gin/correlationid"
-	"github.com/banzaicloud/pipeline/internal/platform/gin/utils"
+	ginutils "github.com/banzaicloud/pipeline/internal/platform/gin/utils"
+	pkgCluster "github.com/banzaicloud/pipeline/pkg/cluster"
 	pkgCommon "github.com/banzaicloud/pipeline/pkg/common"
 	"github.com/gin-gonic/gin"
 	"github.com/goph/emperror"
@@ -76,7 +77,7 @@ func (g *clusterGetter) GetClusterFromRequest(c *gin.Context) (cluster.CommonClu
 
 		logger = logger.WithField("cluster", clusterID)
 
-		cl, err = g.manager.GetClusterByID(ctx, organizationID, clusterID)
+		cl, err = g.manager.GetClusterByID(ctx, organizationID, pkgCluster.ClusterID(clusterID))
 	case "name":
 		clusterName := c.Param("id")
 
