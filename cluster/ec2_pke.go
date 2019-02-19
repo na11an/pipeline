@@ -29,7 +29,7 @@ import (
 	pipConfig "github.com/banzaicloud/pipeline/config"
 	"github.com/banzaicloud/pipeline/internal/backoff"
 	"github.com/banzaicloud/pipeline/internal/cluster"
-	internalPke "github.com/banzaicloud/pipeline/internal/providers/pke"
+	internalPKE "github.com/banzaicloud/pipeline/internal/providers/pke"
 	"github.com/banzaicloud/pipeline/model"
 	pkgAuth "github.com/banzaicloud/pipeline/pkg/auth"
 	pkgCluster "github.com/banzaicloud/pipeline/pkg/cluster"
@@ -51,7 +51,7 @@ var _ CommonCluster = (*EC2ClusterPKE)(nil)
 
 type EC2ClusterPKE struct {
 	db    *gorm.DB
-	model *internalPke.EC2PKEClusterModel
+	model *internalPKE.EC2PKEClusterModel
 	//amazonCluster *ec2.EC2 //Don't use this directly
 	APIEndpoint string
 	log         logrus.FieldLogger
@@ -303,32 +303,32 @@ func (c *EC2ClusterPKE) CreatePKECluster(tokenGenerator TokenGenerator, external
 func (c *EC2ClusterPKE) RegisterNode(name, nodePoolName, ip string, master, worker bool) error {
 
 	db := pipConfig.DB()
-	nodePool := internalPke.NodePool{
+	nodePool := internalPKE.NodePool{
 		Name:      nodePoolName,
 		ClusterID: c.GetID(),
 	}
 
-	roles := internalPke.Roles{}
+	roles := internalPKE.Roles{}
 	if master {
-		roles = append(roles, internalPke.RoleMaster)
+		roles = append(roles, internalPKE.RoleMaster)
 	}
 	if worker {
-		roles = append(roles, internalPke.RoleWorker)
+		roles = append(roles, internalPKE.RoleWorker)
 	}
 
-	if err := db.Where(nodePool).Attrs(internalPke.NodePool{
+	if err := db.Where(nodePool).Attrs(internalPKE.NodePool{
 		Roles: roles,
 	}).FirstOrCreate(&nodePool).Error; err != nil {
 		return emperror.Wrap(err, "failed to register nodepool")
 	}
 
-	node := internalPke.Host{
+	node := internalPKE.Host{
 		NodePoolID: nodePool.NodePoolID,
 		Name:       name,
 	}
 
-	if err := db.Where(node).Attrs(internalPke.Host{
-		Labels:    make(internalPke.Labels),
+	if err := db.Where(node).Attrs(internalPKE.Host{
+		Labels:    make(internalPKE.Labels),
 		PrivateIP: ip,
 	}).FirstOrCreate(&node).Error; err != nil {
 		return emperror.Wrap(err, "failed to register node")
@@ -424,7 +424,7 @@ func (c *EC2ClusterPKE) GetStatus() (*pkgCluster.GetClusterStatusResponse, error
 	hasSpotNodePool := false
 	nodePools := make(map[string]*pkgCluster.NodePoolStatus)
 	for _, np := range c.model.NodePools {
-		providerConfig := internalPke.NodePoolProviderConfigAmazon{}
+		providerConfig := internalPKE.NodePoolProviderConfigAmazon{}
 		err := mapstructure.Decode(np.ProviderConfig, &providerConfig)
 		if err != nil {
 			return nil, emperror.WrapWith(err, "failed to decode providerconfig", "cluster", c.model.Cluster.Name)
@@ -522,10 +522,10 @@ func (c *EC2ClusterPKE) GetBootstrapCommand(nodePoolName, url, token string) str
 	for _, np := range c.model.NodePools {
 		if np.Name == nodePoolName {
 			for _, role := range np.Roles {
-				if role == internalPke.RoleMaster {
+				if role == internalPKE.RoleMaster {
 					cmd = "master"
 					break
-				} else if role == internalPke.RoleWorker {
+				} else if role == internalPKE.RoleWorker {
 					cmd = "worker"
 				}
 			}
@@ -577,7 +577,7 @@ func CreateEC2ClusterPKEFromRequest(request *pkgCluster.CreateClusterRequest, or
 		return nil, err
 	}
 
-	c.model = &internalPke.EC2PKEClusterModel{
+	c.model = &internalPKE.EC2PKEClusterModel{
 		Cluster: cluster.ClusterModel{
 			Name:           request.Name,
 			Location:       request.Location,
@@ -604,7 +604,7 @@ func CreateEC2ClusterPKEFromModel(modelCluster *model.ClusterModel) (*EC2Cluster
 
 	db := pipConfig.DB()
 
-	m := internalPke.EC2PKEClusterModel{
+	m := internalPKE.EC2PKEClusterModel{
 		ClusterID: modelCluster.ID,
 	}
 
@@ -630,11 +630,11 @@ func CreateEC2ClusterPKEFromModel(modelCluster *model.ClusterModel) (*EC2Cluster
 	return c, nil
 }
 
-func createEC2ClusterPKENodePoolsFromRequest(pools pke.NodePools, userId pkgAuth.UserID) internalPke.NodePools {
-	var nps internalPke.NodePools
+func createEC2ClusterPKENodePoolsFromRequest(pools pke.NodePools, userId pkgAuth.UserID) internalPKE.NodePools {
+	var nps internalPKE.NodePools
 
 	for _, pool := range pools {
-		np := internalPke.NodePool{
+		np := internalPKE.NodePool{
 			Name:           pool.Name,
 			Roles:          convertRoles(pool.Roles),
 			Hosts:          convertHosts(pool.Hosts),
@@ -647,16 +647,16 @@ func createEC2ClusterPKENodePoolsFromRequest(pools pke.NodePools, userId pkgAuth
 	return nps
 }
 
-func convertRoles(roles pke.Roles) (result internalPke.Roles) {
+func convertRoles(roles pke.Roles) (result internalPKE.Roles) {
 	for _, role := range roles {
-		result = append(result, internalPke.Role(role))
+		result = append(result, internalPKE.Role(role))
 	}
 	return
 }
 
-func convertHosts(hosts pke.Hosts) (result internalPke.Hosts) {
+func convertHosts(hosts pke.Hosts) (result internalPKE.Hosts) {
 	for _, host := range hosts {
-		result = append(result, internalPke.Host{
+		result = append(result, internalPKE.Host{
 			Name:             host.Name,
 			PrivateIP:        host.PrivateIP,
 			NetworkInterface: host.NetworkInterface,
@@ -669,27 +669,27 @@ func convertHosts(hosts pke.Hosts) (result internalPke.Hosts) {
 	return
 }
 
-func convertNodePoolProvider(provider pke.NodePoolProvider) (result internalPke.NodePoolProvider) {
-	return internalPke.NodePoolProvider(provider)
+func convertNodePoolProvider(provider pke.NodePoolProvider) (result internalPKE.NodePoolProvider) {
+	return internalPKE.NodePoolProvider(provider)
 }
 
-func convertLabels(labels pke.Labels) internalPke.Labels {
-	res := make(internalPke.Labels, len(labels))
+func convertLabels(labels pke.Labels) internalPKE.Labels {
+	res := make(internalPKE.Labels, len(labels))
 	for k, v := range labels {
 		res[k] = v
 	}
 	return res
 }
 
-func convertTaints(taints pke.Taints) (result internalPke.Taints) {
+func convertTaints(taints pke.Taints) (result internalPKE.Taints) {
 	for _, taint := range taints {
-		result = append(result, internalPke.Taint(taint))
+		result = append(result, internalPKE.Taint(taint))
 	}
 	return
 }
 
-func createEC2PKENetworkFromRequest(network pke.Network, userId pkgAuth.UserID) internalPke.Network {
-	n := internalPke.Network{
+func createEC2PKENetworkFromRequest(network pke.Network, userId pkgAuth.UserID) internalPKE.Network {
+	n := internalPKE.Network{
 		ServiceCIDR:      network.ServiceCIDR,
 		PodCIDR:          network.PodCIDR,
 		Provider:         convertNetworkProvider(network.Provider),
@@ -699,51 +699,51 @@ func createEC2PKENetworkFromRequest(network pke.Network, userId pkgAuth.UserID) 
 	return n
 }
 
-func convertNetworkProvider(provider pke.NetworkProvider) (result internalPke.NetworkProvider) {
-	return internalPke.NetworkProvider(provider)
+func convertNetworkProvider(provider pke.NetworkProvider) (result internalPKE.NetworkProvider) {
+	return internalPKE.NetworkProvider(provider)
 }
 
-func createEC2ClusterPKEFromRequest(kubernetes pke.Kubernetes, userId pkgAuth.UserID) internalPke.Kubernetes {
-	k := internalPke.Kubernetes{
+func createEC2ClusterPKEFromRequest(kubernetes pke.Kubernetes, userId pkgAuth.UserID) internalPKE.Kubernetes {
+	k := internalPKE.Kubernetes{
 		Version: kubernetes.Version,
-		RBAC:    internalPke.RBAC{Enabled: kubernetes.RBAC.Enabled},
+		RBAC:    internalPKE.RBAC{Enabled: kubernetes.RBAC.Enabled},
 	}
 	k.CreatedBy = userId
 	return k
 }
 
-func createEC2ClusterPKEKubeADMFromRequest(kubernetes pke.KubeADM, userId pkgAuth.UserID) internalPke.KubeADM {
-	a := internalPke.KubeADM{
+func createEC2ClusterPKEKubeADMFromRequest(kubernetes pke.KubeADM, userId pkgAuth.UserID) internalPKE.KubeADM {
+	a := internalPKE.KubeADM{
 		ExtraArgs: convertExtraArgs(kubernetes.ExtraArgs),
 	}
 	a.CreatedBy = userId
 	return a
 }
 
-func convertExtraArgs(extraArgs pke.ExtraArgs) internalPke.ExtraArgs {
-	res := make(internalPke.ExtraArgs, len(extraArgs))
+func convertExtraArgs(extraArgs pke.ExtraArgs) internalPKE.ExtraArgs {
+	res := make(internalPKE.ExtraArgs, len(extraArgs))
 	for k, v := range extraArgs {
-		res[k] = internalPke.ExtraArg(v)
+		res[k] = internalPKE.ExtraArg(v)
 	}
 	return res
 }
 
-func createEC2ClusterPKECRIFromRequest(cri pke.CRI, userId pkgAuth.UserID) internalPke.CRI {
-	c := internalPke.CRI{
-		Runtime:       internalPke.Runtime(cri.Runtime),
+func createEC2ClusterPKECRIFromRequest(cri pke.CRI, userId pkgAuth.UserID) internalPKE.CRI {
+	c := internalPKE.CRI{
+		Runtime:       internalPKE.Runtime(cri.Runtime),
 		RuntimeConfig: cri.RuntimeConfig,
 	}
 	c.CreatedBy = userId
 	return c
 }
 
-func getMasterInstanceTypeAndImageFromNodePools(nodepools internalPke.NodePools) (masterInstanceType string, masterImage string, err error) {
+func getMasterInstanceTypeAndImageFromNodePools(nodepools internalPKE.NodePools) (masterInstanceType string, masterImage string, err error) {
 	for _, nodepool := range nodepools {
 		for _, role := range nodepool.Roles {
-			if role == internalPke.RoleMaster {
+			if role == internalPKE.RoleMaster {
 				switch nodepool.Provider {
-				case internalPke.NPPAmazon:
-					providerConfig := internalPke.NodePoolProviderConfigAmazon{}
+				case internalPKE.NPPAmazon:
+					providerConfig := internalPKE.NodePoolProviderConfigAmazon{}
 					err = mapstructure.Decode(nodepool.ProviderConfig, &providerConfig)
 					if err != nil {
 						return
