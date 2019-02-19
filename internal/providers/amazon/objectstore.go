@@ -322,7 +322,7 @@ func (s *objectStore) ListManagedBuckets() ([]*objectstore.BucketInfo, error) {
 			Managed:   true,
 			Location:  bucket.Region,
 			SecretRef: bucket.SecretRef,
-			Cloud:     providers.Amazon,
+			Cloud:     string(providers.Amazon),
 			Status:    bucket.Status,
 			StatusMsg: bucket.StatusMsg,
 		})

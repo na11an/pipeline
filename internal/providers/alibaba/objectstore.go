@@ -221,7 +221,7 @@ func (os *objectStore) ListManagedBuckets() ([]*objectstore.BucketInfo, error) {
 	bucketList := make([]*objectstore.BucketInfo, 0)
 	for _, bucket := range alibabaBuckets {
 		bucketList = append(bucketList, &objectstore.BucketInfo{
-			Cloud:     providers.Alibaba,
+			Cloud:     string(providers.Alibaba),
 			Managed:   true,
 			Name:      bucket.Name,
 			Location:  bucket.Region,

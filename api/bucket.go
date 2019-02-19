@@ -90,7 +90,7 @@ func ListAllBuckets(c *gin.Context) {
 func ListBuckets(c *gin.Context) {
 	logger := correlationid.Logger(log, c)
 
-	organization, secretItem, cloudType, ok := getBucketContext(c, logger)
+	organization, secretItem, provider, ok := getBucketContext(c, logger)
 	if !ok {
 		return
 	}
@@ -98,18 +98,18 @@ func ListBuckets(c *gin.Context) {
 	logger = logger.WithFields(logrus.Fields{
 		"organization": organization.ID,
 		"secret":       secretItem.ID,
-		"provider":     cloudType,
+		"provider":     provider,
 	})
 
 	logger.Infof("retrieving object store buckets")
 
 	objectStoreCtx := &providers.ObjectStoreContext{
-		Provider:     cloudType,
+		Provider:     provider,
 		Secret:       secretItem,
 		Organization: organization,
 	}
 
-	switch cloudType {
+	switch provider {
 	case pkgProviders.Alibaba, pkgProviders.Amazon:
 		location, ok := ginutils.RequiredQueryOrAbort(c, "location")
 		if !ok {
@@ -147,7 +147,7 @@ func ListManagedBuckets(c *gin.Context) {
 	logger := correlationid.Logger(log, c)
 	organization := auth.GetCurrentOrganization(c.Request)
 
-	allProviders := []string{
+	allProviders := []pkgProviders.ProviderID{
 		pkgProviders.Alibaba,
 		pkgProviders.Amazon,
 		pkgProviders.Azure,
@@ -229,7 +229,7 @@ func CreateBucket(c *gin.Context) {
 		createBucketRequest.SecretId = secret.GenerateSecretIDFromName(createBucketRequest.SecretName)
 	}
 
-	cloudType, err := determineCloudProviderFromRequest(createBucketRequest)
+	provider, err := determineCloudProviderFromRequest(createBucketRequest)
 	if err != nil {
 		ginutils.ReplyWithErrorResponse(c, errorResponseFrom(err))
 
@@ -238,12 +238,12 @@ func CreateBucket(c *gin.Context) {
 
 	logger = logger.WithFields(logrus.Fields{
 		"secret":   createBucketRequest.SecretId,
-		"provider": cloudType,
+		"provider": provider,
 		"bucket":   createBucketRequest.Name,
 	})
 
 	logger.Debug("validating secret")
-	retrievedSecret, err := getValidatedSecret(organization.ID, createBucketRequest.SecretId, cloudType)
+	retrievedSecret, err := getValidatedSecret(organization.ID, createBucketRequest.SecretId, string(provider))
 	if err != nil {
 		logger.Errorf("secret validation failed: %s", err.Error())
 		ginutils.ReplyWithErrorResponse(c, errorResponseFrom(err))
@@ -254,12 +254,12 @@ func CreateBucket(c *gin.Context) {
 	logger.Debug("secret validation successful")
 
 	objectStoreCtx := &providers.ObjectStoreContext{
-		Provider:     cloudType,
+		Provider:     provider,
 		Secret:       retrievedSecret,
 		Organization: organization,
 	}
 
-	switch cloudType {
+	switch provider {
 	case pkgProviders.Alibaba:
 		objectStoreCtx.Location = createBucketRequest.Properties.Alibaba.Location
 
@@ -290,7 +290,7 @@ func CreateBucket(c *gin.Context) {
 
 	c.JSON(http.StatusAccepted, CreateBucketResponse{
 		BucketName: createBucketRequest.Name,
-		CloudType:  cloudType,
+		CloudType:  string(provider),
 	})
 
 	go func() {
@@ -312,7 +312,7 @@ func CheckBucket(c *gin.Context) {
 	bucketName := c.Param("name")
 	logger = logger.WithField("bucket", bucketName)
 
-	organization, secretItem, cloudType, ok := getBucketContext(c, logger)
+	organization, secretItem, provider, ok := getBucketContext(c, logger)
 	if !ok {
 		return
 	}
@@ -320,16 +320,16 @@ func CheckBucket(c *gin.Context) {
 	logger = logger.WithFields(logrus.Fields{
 		"organization": organization.ID,
 		"secret":       secretItem.ID,
-		"provider":     cloudType,
+		"provider":     provider,
 	})
 
 	objectStoreCtx := &providers.ObjectStoreContext{
-		Provider:     cloudType,
+		Provider:     provider,
 		Secret:       secretItem,
 		Organization: organization,
 	}
 
-	switch cloudType {
+	switch provider {
 	case pkgProviders.Alibaba, pkgProviders.Amazon, pkgProviders.Oracle:
 		location, ok := ginutils.RequiredQueryOrAbort(c, "location")
 		if !ok {
@@ -393,7 +393,7 @@ func DeleteBucket(c *gin.Context) {
 	bucketName := c.Param("name")
 	logger = logger.WithField("bucket", bucketName)
 
-	organization, secretItem, cloudType, ok := getBucketContext(c, logger)
+	organization, secretItem, provider, ok := getBucketContext(c, logger)
 	if !ok {
 		return
 	}
@@ -401,19 +401,19 @@ func DeleteBucket(c *gin.Context) {
 	logger = logger.WithFields(logrus.Fields{
 		"organization": organization.ID,
 		"secret":       secretItem.ID,
-		"provider":     cloudType,
+		"provider":     provider,
 	})
 
 	logger.Infof("deleting object store bucket")
 
 	objectStoreCtx := &providers.ObjectStoreContext{
-		Provider:       cloudType,
+		Provider:       provider,
 		Secret:         secretItem,
 		Organization:   organization,
 		ForceOperation: force,
 	}
 
-	switch cloudType {
+	switch provider {
 	case pkgProviders.Oracle:
 		location, ok := ginutils.RequiredQueryOrAbort(c, "location")
 		if !ok {
@@ -469,7 +469,7 @@ func hasSecret(c *gin.Context) bool {
 	return c.GetHeader(secretNameHeader) != "" || c.GetHeader(secretIdHeader) != ""
 }
 
-func getBucketContext(c *gin.Context, logger logrus.FieldLogger) (*auth.Organization, *secret.SecretItemResponse, string, bool) {
+func getBucketContext(c *gin.Context, logger logrus.FieldLogger) (*auth.Organization, *secret.SecretItemResponse, pkgProviders.ProviderID, bool) {
 	organization := auth.GetCurrentOrganization(c.Request)
 
 	var secretID pkgSecret.SecretID
@@ -485,12 +485,13 @@ func getBucketContext(c *gin.Context, logger logrus.FieldLogger) (*auth.Organiza
 		secretID = pkgSecret.SecretID(secretIDValue)
 	}
 
-	provider, ok := ginutils.RequiredQueryOrAbort(c, "cloudType")
+	cloudType, ok := ginutils.RequiredQueryOrAbort(c, "cloudType")
 	if !ok {
-		logger.Debug("missing provider")
+		logger.Debug("missing cloudType")
 
 		return nil, nil, "", false
 	}
+	provider := pkgProviders.ProviderID(cloudType)
 
 	logger = logger.WithFields(logrus.Fields{
 		"organization": organization.ID,
@@ -498,7 +499,7 @@ func getBucketContext(c *gin.Context, logger logrus.FieldLogger) (*auth.Organiza
 		"provider":     provider,
 	})
 
-	s, err := getValidatedSecret(organization.ID, secretID, provider)
+	s, err := getValidatedSecret(organization.ID, secretID, cloudType)
 	if err != nil {
 		logger.Errorf("secret validation failed: %s", err.Error())
 		ginutils.ReplyWithErrorResponse(c, errorResponseFrom(err))
@@ -532,7 +533,7 @@ func getValidatedSecret(organizationId pkgAuth.OrganizationID, secretId pkgSecre
 		return nil, err
 	}
 
-	if err := pkgProviders.ValidateProvider(retrievedSecret.Type); err != nil {
+	if err := pkgProviders.ValidateProvider(pkgProviders.ProviderID(retrievedSecret.Type)); err != nil {
 		return nil, err
 	}
 
@@ -543,23 +544,23 @@ func getValidatedSecret(organizationId pkgAuth.OrganizationID, secretId pkgSecre
 	return retrievedSecret, nil
 }
 
-func determineCloudProviderFromRequest(req CreateBucketRequest) (string, error) {
+func determineCloudProviderFromRequest(req CreateBucketRequest) (pkgProviders.ProviderID, error) {
 	if req.Properties.Alibaba != nil {
-		return pkgCluster.Alibaba, nil
-	}
-	if req.Properties.Azure != nil {
-		return pkgCluster.Azure, nil
+		return pkgProviders.Alibaba, nil
 	}
 	if req.Properties.Amazon != nil {
-		return pkgCluster.Amazon, nil
+		return pkgProviders.Amazon, nil
+	}
+	if req.Properties.Azure != nil {
+		return pkgProviders.Azure, nil
 	}
 	if req.Properties.Google != nil {
-		return pkgCluster.Google, nil
+		return pkgProviders.Google, nil
 	}
 	if req.Properties.Oracle != nil {
-		return pkgCluster.Oracle, nil
+		return pkgProviders.Oracle, nil
 	}
-	return "", pkgErrors.ErrorNotSupportedCloudType
+	return pkgProviders.Unknown, pkgErrors.ErrorNotSupportedCloudType
 }
 
 // bucketsResponse decorates and formats the list of buckets to be returned
@@ -623,7 +624,7 @@ func GetBucket(c *gin.Context) {
 
 	organization := auth.GetCurrentOrganization(c.Request)
 	objectStoreCtx := &providers.ObjectStoreContext{
-		Provider:     qd.paramValue(qd.CloudType),
+		Provider:     pkgProviders.ProviderID(qd.paramValue(qd.CloudType)),
 		Organization: organization,
 	}
 

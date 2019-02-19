@@ -30,7 +30,7 @@ import (
 // ServiceParams describes all parameters necessary to create cloud provider agnostic VPC network queries
 type ServiceParams struct {
 	Logger            logrus.FieldLogger
-	Provider          string
+	Provider          providers.ProviderID
 	Region            string
 	ResourceGroupName string
 	Secret            *secret.SecretItemResponse

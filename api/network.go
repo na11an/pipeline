@@ -102,7 +102,7 @@ func (a *NetworkAPI) ListVPCNetworks(ctx *gin.Context) {
 		return
 	}
 
-	err = sir.ValidateSecretType(provider)
+	err = sir.ValidateSecretType(string(provider))
 	if err != nil {
 		replyWithError(ctx, err)
 		return
@@ -169,7 +169,7 @@ func (a *NetworkAPI) ListVPCSubnets(ctx *gin.Context) {
 		return
 	}
 
-	err = sir.ValidateSecretType(provider)
+	err = sir.ValidateSecretType(string(provider))
 	if err != nil {
 		replyWithError(ctx, err)
 		return
@@ -237,7 +237,7 @@ func (a *NetworkAPI) ListRouteTables(ctx *gin.Context) {
 		return
 	}
 
-	err = sir.ValidateSecretType(provider)
+	err = sir.ValidateSecretType(string(provider))
 	if err != nil {
 		replyWithError(ctx, err)
 		return
@@ -269,12 +269,12 @@ func (a *NetworkAPI) ListRouteTables(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, routeTableInfos)
 }
 
-func getRequiredProviderFromContext(ctx *gin.Context, logger logrus.FieldLogger) (string, bool) {
+func getRequiredProviderFromContext(ctx *gin.Context, logger logrus.FieldLogger) (pkgProviders.ProviderID, bool) {
 	provider, ok := ginutils.RequiredQueryOrAbort(ctx, "cloudType")
-	return provider, ok
+	return pkgProviders.ProviderID(provider), ok
 }
 
-func getRequiredRegionOrResourceGroupFromContext(ctx *gin.Context, provider string, logger logrus.FieldLogger) (string, string, bool) {
+func getRequiredRegionOrResourceGroupFromContext(ctx *gin.Context, provider pkgProviders.ProviderID, logger logrus.FieldLogger) (string, string, bool) {
 	switch provider {
 	case pkgProviders.Azure:
 		resourceGroup, ok := ginutils.RequiredQueryOrAbort(ctx, "resourceGroup")

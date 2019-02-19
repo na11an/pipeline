@@ -35,6 +35,7 @@ import (
 	"github.com/banzaicloud/pipeline/auth"
 	"github.com/banzaicloud/pipeline/internal/ark/api"
 	"github.com/banzaicloud/pipeline/internal/providers"
+	pkgProviders "github.com/banzaicloud/pipeline/pkg/providers"
 )
 
 // BucketsService is for buckets related ARK functions
@@ -76,7 +77,7 @@ func (s *BucketsService) GetObjectStoreForBucket(bucket *api.Bucket) (cloudprovi
 	}
 
 	ctx := providers.ObjectStoreContext{
-		Provider:       bucket.Cloud,
+		Provider:       pkgProviders.ProviderID(bucket.Cloud),
 		Secret:         secret,
 		Location:       bucket.Location,
 		StorageAccount: bucket.StorageAccount,

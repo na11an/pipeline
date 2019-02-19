@@ -92,7 +92,7 @@ func GetProjects(c *gin.Context) {
 // httpClient builds a http client with the service account available through the secret and organization
 func (sc *servicesContext) httpClient() (*http.Client, error) {
 
-	secret, err := getValidatedSecret(sc.orgId, sc.secretId, providers.Google)
+	secret, err := getValidatedSecret(sc.orgId, sc.secretId, string(providers.Google))
 	if err != nil {
 		return nil, err
 	}

@@ -31,7 +31,7 @@ import (
 
 // ObjectStoreContext describes all parameters necessary to create a cloud provider agnostic object store instance.
 type ObjectStoreContext struct {
-	Provider     string
+	Provider     providers.ProviderID
 	Secret       *secret.SecretItemResponse
 	Organization *auth.Organization
 

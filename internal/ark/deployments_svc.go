@@ -133,7 +133,7 @@ func (s *DeploymentsService) Deploy(bucket *ClusterBackupBucketsModel, restoreMo
 	}
 
 	var resourceGroup string
-	if s.cluster.GetCloud() == providers.Azure {
+	if providers.ProviderID(s.cluster.GetCloud()) == providers.Azure {
 		m := s.cluster.(api.AKSCluster)
 		resourceGroup = m.GetResourceGroupName()
 	}
@@ -141,7 +141,7 @@ func (s *DeploymentsService) Deploy(bucket *ClusterBackupBucketsModel, restoreMo
 	config, err := s.getChartConfig(ConfigRequest{
 		Cluster: clusterConfig{
 			Name:        s.cluster.GetName(),
-			Provider:    s.cluster.GetCloud(),
+			Provider:    providers.ProviderID(s.cluster.GetCloud()),
 			Location:    s.cluster.GetLocation(),
 			RBACEnabled: s.cluster.RbacEnabled(),
 			azureClusterConfig: azureClusterConfig{
@@ -151,7 +151,7 @@ func (s *DeploymentsService) Deploy(bucket *ClusterBackupBucketsModel, restoreMo
 		ClusterSecret: clusterSecret,
 
 		Bucket: bucketConfig{
-			Provider: bucket.Cloud,
+			Provider: providers.ProviderID(bucket.Cloud),
 			Name:     bucket.BucketName,
 			Location: bucket.Location,
 			azureBucketConfig: azureBucketConfig{

@@ -104,7 +104,7 @@ type ConfigRequest struct {
 
 type clusterConfig struct {
 	Name        string
-	Provider    string
+	Provider    providers.ProviderID
 	Location    string
 	RBACEnabled bool
 
@@ -117,7 +117,7 @@ type azureClusterConfig struct {
 
 type bucketConfig struct {
 	Name     string
-	Provider string
+	Provider providers.ProviderID
 	Location string
 
 	azureBucketConfig

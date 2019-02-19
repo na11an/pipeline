@@ -33,7 +33,7 @@ func init() {
 }
 
 // IsProviderSupported checks whether the given provider is supported
-func IsProviderSupported(provider string) error {
+func IsProviderSupported(provider providers.ProviderID) error {
 
 	switch provider {
 	case providers.Google:

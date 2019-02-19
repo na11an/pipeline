@@ -15,6 +15,8 @@
 package providers
 
 import (
+	"database/sql/driver"
+
 	pkgErrors "github.com/banzaicloud/pipeline/pkg/errors"
 	"github.com/banzaicloud/pipeline/pkg/providers/alibaba"
 	"github.com/banzaicloud/pipeline/pkg/providers/amazon"
@@ -23,12 +25,29 @@ import (
 	"github.com/banzaicloud/pipeline/pkg/providers/oracle"
 )
 
+// ProviderID represents the identifier of a provider
+type ProviderID string
+
+// Value returns the value of the ID
+func (id ProviderID) Value() (driver.Value, error) {
+	// TODO: remove Valuer implementation when mysql driver version is >=1.4
+	return string(id), nil
+}
+
 const (
-	Alibaba = alibaba.Provider
-	Amazon  = amazon.Provider
-	Azure   = azure.Provider
-	Google  = google.Provider
-	Oracle  = oracle.Provider
+	// Alibaba is the ID of the Alibaba Cloud cloud provider
+	Alibaba ProviderID = alibaba.Provider
+	// Amazon is the ID of the Amazon Web Services cloud provider
+	Amazon ProviderID = amazon.Provider
+	// Azure is the ID of the Microsoft Azure cloud provider
+	Azure ProviderID = azure.Provider
+	// Google is the ID of the Google Cloud Platform cloud provider
+	Google ProviderID = google.Provider
+	// Oracle is the ID of the Oracle Cloud cloud provider
+	Oracle ProviderID = oracle.Provider
+
+	// Unknown represents an unknown provider ID
+	Unknown ProviderID = "unknown"
 
 	BucketCreating    = "CREATING"
 	BucketCreated     = "AVAILABLE"
@@ -41,7 +60,7 @@ const (
 
 // ValidateProvider validates if the passed cloud provider is supported.
 // Unsupported cloud providers trigger an pkgErrors.ErrorNotSupportedCloudType error.
-func ValidateProvider(provider string) error {
+func ValidateProvider(provider ProviderID) error {
 	switch provider {
 	case Alibaba:
 	case Amazon:

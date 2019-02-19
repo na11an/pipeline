@@ -506,7 +506,7 @@ func (s *ObjectStore) ListManagedBuckets() ([]*objectstore.BucketInfo, error) {
 			Location:        bucket.Location,
 			SecretRef:       bucket.SecretRef,
 			AccessSecretRef: bucket.AccessSecretRef,
-			Cloud:           providers.Azure,
+			Cloud:           string(providers.Azure),
 			Status:          bucket.Status,
 			StatusMsg:       bucket.StatusMsg,
 			Azure: &objectstore.BlobStoragePropsForAzure{
