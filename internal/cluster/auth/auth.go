@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	pkgAuth "github.com/banzaicloud/pipeline/pkg/auth"
+	"github.com/banzaicloud/pipeline/internal/cluster/clustersecret"
 	pkgSecret "github.com/banzaicloud/pipeline/pkg/secret"
 	"github.com/banzaicloud/pipeline/secret"
 	"github.com/dexidp/dex/api"
@@ -42,20 +42,20 @@ func newDexClient(hostAndPort, caPath string) (*dexClient, error) {
 	if caPath != "" {
 		creds, err := credentials.NewClientTLSFromFile(caPath, "")
 		if err != nil {
-			return nil, fmt.Errorf("load dex cert: %v", err)
+			return nil, emperror.Wrapf(err, "loading dex CA cert failed")
 		}
 		dialOption = grpc.WithTransportCredentials(creds)
 	}
 	conn, err := grpc.Dial(hostAndPort, dialOption)
 	if err != nil {
-		return nil, fmt.Errorf("dail: %v", err)
+		return nil, emperror.Wrapf(err, "grpc dial failed")
 	}
 	return &dexClient{DexClient: api.NewDexClient(conn), grpcConn: conn}, nil
 }
 
 type ClusterAuthService interface {
-	RegisterCluster(pkgAuth.OrganizationID, string) error
-	UnRegisterCluster(string) error
+	RegisterCluster(context.Context, uint, string) error
+	UnRegisterCluster(context.Context, string) error
 }
 
 type noOpClusterAuthService struct {
@@ -65,28 +65,32 @@ func NewNoOpClusterAuthService() (ClusterAuthService, error) {
 	return &noOpClusterAuthService{}, nil
 }
 
-func (*noOpClusterAuthService) UnRegisterCluster(clusterUID string) error {
+func (*noOpClusterAuthService) UnRegisterCluster(tx context.Context, clusterUID string) error {
 	return nil
 }
 
-func (*noOpClusterAuthService) RegisterCluster(orgID pkgAuth.OrganizationID, clusterUID string) error {
+func (*noOpClusterAuthService) RegisterCluster(tx context.Context, orgID uint, clusterUID string) error {
 	return nil
 }
 
 type dexClusterAuthService struct {
-	dexClient *dexClient
+	dexClient   *dexClient
+	secretStore *clustersecret.Store
 }
 
-func NewDexClusterAuthService() (ClusterAuthService, error) {
+func NewDexClusterAuthService(secretStore *clustersecret.Store) (ClusterAuthService, error) {
 	client, err := newDexClient(viper.GetString("auth.dexGrpcAddress"), viper.GetString("auth.dexGrpcCaCert"))
 	if err != nil {
 		return nil, err
 	}
 
-	return &dexClusterAuthService{dexClient: client}, nil
+	return &dexClusterAuthService{
+		dexClient:   client,
+		secretStore: secretStore,
+	}, nil
 }
 
-func (a *dexClusterAuthService) RegisterCluster(orgID pkgAuth.OrganizationID, clusterUID string) error {
+func (a *dexClusterAuthService) RegisterCluster(ctx context.Context, orgID uint, clusterUID string) error {
 
 	clientSecret, _ := secret.RandomString("randAlphaNum", 32)
 	redirectURI := "http://127.0.0.1:1848/dex/cluster/callback"
@@ -100,12 +104,12 @@ func (a *dexClusterAuthService) RegisterCluster(orgID pkgAuth.OrganizationID, cl
 		},
 	}
 
-	if _, err := a.dexClient.CreateClient(context.TODO(), req); err != nil {
+	if _, err := a.dexClient.CreateClient(ctx, req); err != nil {
 		return emperror.Wrapf(err, "failed to create dex client for cluster: %s", clusterUID)
 	}
 
 	// save the secret to the secret store
-	secretRequest := secret.CreateSecretRequest{
+	secretRequest := clustersecret.SecretCreateRequest{
 		Type: pkgSecret.GenericSecret,
 		Name: clusterUID + "-dex",
 		Values: map[string]string{
@@ -114,7 +118,7 @@ func (a *dexClusterAuthService) RegisterCluster(orgID pkgAuth.OrganizationID, cl
 		},
 	}
 
-	_, err := secret.Store.Store(orgID, &secretRequest)
+	_, err := a.secretStore.EnsureSecretExists(ctx, orgID, secretRequest)
 
 	if err != nil {
 		return emperror.Wrapf(err, "failed to create secret for dex clientID/clientSecret for cluster: %s", clusterUID)
@@ -123,13 +127,13 @@ func (a *dexClusterAuthService) RegisterCluster(orgID pkgAuth.OrganizationID, cl
 	return nil
 }
 
-func (a *dexClusterAuthService) UnRegisterCluster(clusterUID string) error {
+func (a *dexClusterAuthService) UnRegisterCluster(ctx context.Context, clusterUID string) error {
 
 	req := &api.DeleteClientReq{
 		Id: clusterUID,
 	}
 
-	if _, err := a.dexClient.DeleteClient(context.TODO(), req); err != nil {
+	if _, err := a.dexClient.DeleteClient(ctx, req); err != nil {
 		return emperror.Wrapf(err, "failed to delete dex client for cluster: %s", clusterUID)
 	}
 

@@ -165,6 +165,13 @@ func CreateClusterWorkflow(ctx workflow.Context, input CreateClusterWorkflowInpu
 		return err
 	}
 
+	createDexClientActivityInput := CreateDexClientActivityInput{
+		ClusterID: input.ClusterID,
+	}
+	if err := workflow.ExecuteActivity(ctx, CreateDexClientActivityName, createDexClientActivityInput).Get(ctx, nil); err != nil {
+		return err
+	}
+
 	var masterAvailabilityZone string
 	var master NodePool
 	for _, np := range nodePools {
