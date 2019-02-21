@@ -286,6 +286,7 @@ type UpdateProperties struct {
 	GKE   *gke.UpdateClusterGoogle    `json:"gke,omitempty"`
 	Dummy *dummy.UpdateClusterDummy   `json:"dummy,omitempty"`
 	OKE   *oke.Cluster                `json:"oke,omitempty"`
+	PKE   *pke.UpdateClusterPKE       `json:"pke,omitempty"`
 }
 
 // String method prints formatted update request fields
